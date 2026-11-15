@@ -1,0 +1,166 @@
+-- Script de Panel Noclip Pequeño, Móvil y Anti-Crash
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
+-- Crear ScreenGui principal
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BrianNoclipPanelGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Botón flotante para Abrir el Panel (cuando está cerrado)
+local openButton = Instance.new("TextButton")
+openButton.Name = "OpenButton"
+openButton.Size = UDim2.new(0, 50, 0, 50)
+openButton.Position = UDim2.new(0, 20, 0, 150)
+openButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+openButton.Text = "Abrir"
+openButton.TextSize = 13
+openButton.Font = Enum.Font.GothamBold
+openButton.Visible = false
+openButton.Parent = screenGui
+
+local cornerOpen = Instance.new("UICorner")
+cornerOpen.CornerRadius = UDim.new(0, 10)
+cornerOpen.Parent = openButton
+
+-- Marco Principal (Panel Cuadrado y Pequeño)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 180, 0, 160)
+mainFrame.Position = UDim2.new(0.5, -90, 0.5, -80)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Parent = screenGui
+
+local cornerFrame = Instance.new("UICorner")
+cornerFrame.CornerRadius = UDim.new(0, 10)
+cornerFrame.Parent = mainFrame
+
+-- Título del Panel ("Brian noclip")
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -30, 0, 35)
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.Text = "Brian noclip"
+titleLabel.TextSize = 14
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = mainFrame
+
+-- Botón de Cerrar (X)
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 24, 0, 24)
+closeButton.Position = UDim2.new(1, -28, 0, 6)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.Text = "X"
+closeButton.TextSize = 12
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Parent = mainFrame
+
+local cornerClose = Instance.new("UICorner")
+cornerClose.CornerRadius = UDim.new(0, 6)
+cornerClose.Parent = closeButton
+
+-- Botón de la Opción Noclip
+local noclipButton = Instance.new("TextButton")
+noclipButton.Size = UDim2.new(0, 150, 0, 40)
+noclipButton.Position = UDim2.new(0.5, -75, 0.5, -10)
+noclipButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+noclipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+noclipButton.Text = "Noclip: OFF"
+noclipButton.TextSize = 13
+noclipButton.Font = Enum.Font.GothamMedium
+noclipButton.Parent = mainFrame
+
+local cornerNoclip = Instance.new("UICorner")
+cornerNoclip.CornerRadius = UDim.new(0, 8)
+cornerNoclip.Parent = noclipButton
+
+-- Lógica para hacer el Panel Arrastrable
+local dragging, dragInput, dragStart, startPos
+
+titleLabel.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		mainFrame.Position = UDim2.new(
+			startPos.X.Scale, 
+			startPos.X.Offset + delta.X, 
+			startPos.Y.Scale, 
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+-- Lógica para Cerrar y Abrir el Panel
+closeButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+	openButton.Visible = true
+end)
+
+openButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = true
+	openButton.Visible = false
+end)
+
+-- Lógica del Noclip Segura (Evita que el juego te saque)
+local noclipEnabled = false
+local noclipConnection
+
+noclipButton.MouseButton1Click:Connect(function()
+	noclipEnabled = not noclipEnabled
+	
+	if noclipEnabled then
+		noclipButton.Text = "Noclip: ON"
+		noclipButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Verde
+		
+		noclipConnection = RunService.Stepped:Connect(function()
+			local character = player.Character
+			-- Verificamos de forma segura que el personaje y su HumanoidRootPart existan
+			if character and character:FindFirstChild("HumanoidRootPart") then
+				for _, part in ipairs(character:GetDescendants()) do
+					if part:IsA("BasePart") then
+						part.CanCollide = false
+					end
+				end
+			end
+		end)
+	else
+		noclipButton.Text = "Noclip: OFF"
+		noclipButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45) -- Gris
+		
+		if noclipConnection then
+			noclipConnection:Disconnect()
+			noclipConnection = nil
+		end
+		
+		local character = player.Character
+		if character then
+			for _, part in ipairs(character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = true
+				end
+			end
+		end
+	end
+end)
